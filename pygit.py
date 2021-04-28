@@ -22,6 +22,9 @@ def init(args):
                 f.write("ref: refs/heads/master")
             pass
 
+def in_index(content, fname, blob):
+    return f"{fname} {blob}" in content
+
 def gen_blob_dir(blob):
     return blob[:2], blob[2:]
 
@@ -38,8 +41,16 @@ def gen_blob(content, blob):
 
 def gen_index(fname, content):
     indexpath = gen_path(f".pygit/index")
-    with open(indexpath, "a") as f:
-        f.write(f"{fname} {content}\n")
+    with open(indexpath, "r+") as f:
+        lines = f.readlines()
+        newlines = []
+        for line in lines:
+            if line != "\n" and fname not in line:
+                newlines.append(line)
+        newlines.append(f"{fname} {content}\n")
+        f.seek(0)
+        f.write("".join(newlines))
+        f.truncate()
 
 def pprint(root):
     print("------")
@@ -50,7 +61,6 @@ def pprint(root):
     for child in root.children:
         pprint(child)
 ###################################################
-
 
 def add_helper(fnames):
     fpath = gen_path(fnames)
