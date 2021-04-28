@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import os
-from stat import *
+import time
 import hashlib
 import pathlib
 from pygittree import PyGitTree
@@ -30,6 +30,15 @@ def gen_blob_dir(blob):
 
 def gen_hash(key):
     return hashlib.sha1(key.encode(encoding="utf-8"))
+
+def regen_hash(blob):
+    dirname, fname = gen_blob_dir(blob)
+    blobpath = gen_path(f".pygit/objects/{dirname}/{fname}")
+    if os.path.isfile(blobpath):
+        t = time.time()
+        return gen_hash(f"{blob} {t}").hexdigest()
+    else:
+        return blob
 
 def gen_blob(content, blob):
     dirname, filename = gen_blob_dir(blob)
@@ -97,6 +106,7 @@ def gen_tree_from_path(root, path, value):
         if parent.value == "":
             treename = paths[idx - 1]
             blob = gen_hash(f"tree {treename}").hexdigest()
+            blob = regen_hash(blob)
             parent.value = blob
             gen_tree_blob(blob)
         parent.add_child(child)
@@ -125,7 +135,7 @@ def gen_commit_blob(message, root_blob):
 def gen_pygittree_history(root):
     if root.children:
         for child in root.children:
-            blob = gen_hash(f"tree {root.name}").hexdigest()
+            blob = root.value
             dirname, filename = gen_blob_dir(blob)
             with open(gen_path(f".pygit/objects/{dirname}/{filename}"), "a") as f:
                 ftype = "tree" if child.children else "blob"
@@ -142,7 +152,7 @@ def set_branch(commit_blob):
 def commit_helper(message):
     root = PyGitTree()
     blob = gen_hash("tree root").hexdigest()
-    dirname, filename = gen_blob_dir(blob)
+    blob = regen_hash(blob)
     root.value = blob
     gen_tree_blob(blob)
     with open(gen_path(".pygit/index"), "r") as f:
