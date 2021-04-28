@@ -4,7 +4,7 @@ import os
 from stat import *
 import hashlib
 import pathlib
-from graph import Node, PyGitTree
+from pygittree import PyGitTree
 
 ################# UTILS FUNCTION #################
 ROOT_DIR = pathlib.Path(__file__).parent.absolute()
