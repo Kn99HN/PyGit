@@ -52,6 +52,12 @@ def gen_index(fname, content):
         f.write("".join(newlines))
         f.truncate()
 
+def find_ref_path():
+    headpath = gen_path(".pygit/HEAD")
+    with open(headpath, "r") as f:
+        line = f.readline().replace("ref: ", "")
+        return line
+
 def pprint(root):
     print("------")
     print(root.name, root.value)
@@ -101,8 +107,19 @@ def gen_commit_blob(message, root_blob):
     dirname, filename = gen_blob_dir(blob)
     gen_tree_blob(blob)
     filepath = gen_path(f".pygit/objects/{dirname}/{filename}")
+    refpath = find_ref_path()
+    parent = ""
+    if refpath != "":
+        branchpath = gen_path(f".pygit/{refpath}")
+        if os.path.isfile(branchpath):
+            with open(branchpath, "r") as f:
+                line = f.readline()
+                parent = f"\nparent {line}"
     with open(filepath, "w") as f:
-        f.write(f"tree {root_blob} \n\n{message}")
+        content = f"tree {root_blob}"
+        content += parent
+        content += f" \n\n{message}"
+        f.write(content)
     return blob
 
 def gen_pygittree_history(root):
@@ -124,7 +141,8 @@ def set_branch(commit_blob):
 
 def commit_helper(message):
     root = PyGitTree()
-    blob = gen_hash(f"tree root").hexdigest()
+    blob = gen_hash("tree root").hexdigest()
+    dirname, filename = gen_blob_dir(blob)
     root.value = blob
     gen_tree_blob(blob)
     with open(gen_path(".pygit/index"), "r") as f:
